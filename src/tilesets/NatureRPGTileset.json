@@ -1,0 +1,15 @@
+{
+  "columns": 20,
+  "image": "sprites/tilesets/RpgNature.png",
+  "imageheight": 288,
+  "imagewidth": 641,
+  "margin": 0,
+  "name": "NatureRPGTileset",
+  "spacing": 0,
+  "tilecount": 180,
+  "tiledversion": "1.7.2",
+  "tileheight": 32,
+  "tilewidth": 32,
+  "type": "tileset",
+  "version": "1.6"
+}
