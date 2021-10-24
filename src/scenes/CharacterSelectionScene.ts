@@ -1,4 +1,5 @@
 import {
+  filters,
   Container,
   AnimatedSprite,
   Loader,
@@ -7,6 +8,7 @@ import {
   TextStyle,
 } from "pixi.js"
 import { Color, Resources, SCALE } from "../constants"
+import { bloomFilter } from "../filters"
 import GameState from "../GameState"
 import { Key } from "../Key"
 import SceneManager from "../SceneManager"
@@ -32,6 +34,8 @@ const indexToCharacter = Object.entries(characterToIndex).reduce(
   {}
 )
 
+console.log(parseInt(window.localStorage.getItem("selectedCharacter")))
+
 export class CharacterSelectionScene extends Container implements Scene {
   static id = "characterSelection"
 
@@ -46,6 +50,9 @@ export class CharacterSelectionScene extends Container implements Scene {
 
   private screenWidth: number
   private screenHeight: number
+
+  private noiseFilter = new filters.NoiseFilter(0.125)
+  filters = [bloomFilter, this.noiseFilter]
 
   initialize() {
     this.screenWidth = SceneManager.app.screen.width
@@ -101,7 +108,9 @@ export class CharacterSelectionScene extends Container implements Scene {
     spaceText.y = 250 * SCALE
     this.addChild(spaceText)
 
-    this.setSelectedCharacter(0)
+    const selectedCharacter =
+      parseInt(window.localStorage.getItem("selectedCharacter")) ?? 0
+    this.setSelectedCharacter(selectedCharacter)
   }
 
   initializePlayerSprite(character: Character) {
@@ -143,6 +152,10 @@ export class CharacterSelectionScene extends Container implements Scene {
       GameState.setState({
         character: indexToCharacter[this.selectedCharacter],
       })
+      window.localStorage.setItem(
+        "selectedCharacter",
+        this.selectedCharacter.toString()
+      )
       SceneManager.setScene(GameScene.id)
     }
   }
@@ -162,5 +175,9 @@ export class CharacterSelectionScene extends Container implements Scene {
 
   beforeDelete() {
     document.removeEventListener("keydown", this.keyDownHandler)
+  }
+
+  update() {
+    this.noiseFilter.seed = Math.random()
   }
 }

@@ -1,10 +1,9 @@
-import { Container } from "@pixi/display"
+import { Container, filters } from "pixi.js"
 import { MotionBlurFilter } from "@pixi/filter-motion-blur"
-import { Graphics } from "@pixi/graphics"
-import { Ticker } from "@pixi/ticker"
-import { Saw } from "../enemies/Saw"
+import { RGBSplitFilter } from "@pixi/filter-rgb-split"
 import { TestEnemy } from "../enemies/TestEnemy"
 import { EnemyManager } from "../EnemyManager"
+import { bloomFilter } from "../filters"
 import GameState, { UnsubscribeFunction } from "../GameState"
 import { Key } from "../Key"
 import { GameMap } from "../Map"
@@ -29,6 +28,9 @@ export class GameScene extends Container implements Scene {
   private shakeEnd: number
   private shakeStrength = 3
 
+  private rgbSplitFilter = new RGBSplitFilter([-5, 5], [5, -5], [-5, -5])
+  private noiseFilter = new filters.NoiseFilter(0.125)
+
   private stateUnsubscribeFunction: UnsubscribeFunction
 
   initialize() {
@@ -45,6 +47,8 @@ export class GameScene extends Container implements Scene {
 
     const ui = new UI(screenWidth, screenHeight)
     this.addChild(ui)
+
+    this.filters = this.getDefaultFilters()
 
     this.stateUnsubscribeFunction = GameState.subscribe((newState) => {
       if (newState.isGameOver === true) {
@@ -84,11 +88,23 @@ export class GameScene extends Container implements Scene {
       this.x = getRandomInt(-this.shakeStrength, this.shakeStrength)
       this.y = getRandomInt(-this.shakeStrength, this.shakeStrength)
       this.shakeTime += 1
+      this.rgbSplitFilter.red = [
+        getRandomInt(-this.shakeStrength, this.shakeStrength),
+        getRandomInt(-this.shakeStrength, this.shakeStrength),
+      ]
+      this.rgbSplitFilter.green = [
+        getRandomInt(-this.shakeStrength, this.shakeStrength),
+        getRandomInt(-this.shakeStrength, this.shakeStrength),
+      ]
+      this.rgbSplitFilter.blue = [
+        getRandomInt(-this.shakeStrength, this.shakeStrength),
+        getRandomInt(-this.shakeStrength, this.shakeStrength),
+      ]
       if (this.shakeTime >= this.shakeEnd) {
         this.isShaking = false
         this.x = 0
         this.y = 0
-        this.filters = []
+        this.filters = this.getDefaultFilters()
       }
     }
 
@@ -105,6 +121,8 @@ export class GameScene extends Container implements Scene {
         GameState.setState({ time: this.time })
       }
     }
+
+    this.noiseFilter.seed = Math.random()
   }
 
   shake(frames: number = 10, strength: number = 3) {
@@ -112,11 +130,19 @@ export class GameScene extends Container implements Scene {
     this.shakeEnd = frames
     this.shakeTime = 0
     this.shakeStrength = strength
-    this.filters = [new MotionBlurFilter([8, 8])]
+    this.filters = [
+      ...this.getDefaultFilters(),
+      new MotionBlurFilter([8, 8]),
+      this.rgbSplitFilter,
+    ]
   }
 
   beforeDelete() {
     this.stateUnsubscribeFunction()
     this.enemyManager.cleanUp()
+  }
+
+  getDefaultFilters() {
+    return [bloomFilter, this.noiseFilter]
   }
 }

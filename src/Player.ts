@@ -84,6 +84,7 @@ export class Player extends Container {
       this.windowHeight - this.sprite.height * 2 - this.sprite.height / 2
     this.sprite.anchor.set(0.5, 0.5)
     this.sprite.zIndex = 100
+    this.sprite.filters = []
 
     this.sprite.play()
 
@@ -119,7 +120,10 @@ export class Player extends Container {
           this.setTexture("dash")
           this.dashCoolDown = 0
           this.isDashPressed = true
-          this.sprite.filters = [new MotionBlurFilter([12, 0])]
+          this.sprite.filters = [
+            ...this.sprite.filters,
+            new MotionBlurFilter([12, 0]),
+          ]
           // save current vel and acc to maintain after player done dashing
           this.velocityBeforeDash = this.velocity
           this.accelerationBeforeDash = this.acceleration
@@ -217,7 +221,9 @@ export class Player extends Container {
       } else {
         this.dashCoolDown += 1
         if (this.dashCoolDown >= DASH_COOL_DOWN) {
-          this.sprite.filters = []
+          this.sprite.filters = this.sprite.filters.filter(
+            (f) => !(f instanceof MotionBlurFilter)
+          )
           this.setState(PlayerState.IDLE)
           this.velocity = this.velocityBeforeDash
           this.acceleration = this.accelerationBeforeDash
