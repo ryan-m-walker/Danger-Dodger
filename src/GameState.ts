@@ -61,6 +61,10 @@ class GameState {
       this.subscriptions = this.subscriptions.filter((s) => s.id !== id)
     }
   }
+
+  subscriptionCount() {
+    return this.subscriptions.length
+  }
 }
 
 export default new GameState()

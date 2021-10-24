@@ -1,5 +1,6 @@
 import { Container } from "@pixi/display"
 import { Graphics } from "@pixi/graphics"
+import { Ticker } from "@pixi/ticker"
 import { Saw } from "../enemies/Saw"
 import { TestEnemy } from "../enemies/TestEnemy"
 import { EnemyManager } from "../EnemyManager"
@@ -21,7 +22,7 @@ export class GameScene extends Container implements Scene {
   time = 0
   startTime: number
 
-  stateUnsubscribeFunction: UnsubscribeFunction
+  private stateUnsubscribeFunction: UnsubscribeFunction
 
   initialize() {
     const screenWidth = SceneManager.app.screen.width
@@ -34,11 +35,6 @@ export class GameScene extends Container implements Scene {
     this.addChild(map)
 
     this.initGameState()
-
-    // this.testEnemy = new Saw(screenWidth / 2)
-    // this.testEnemy.y = screenHeight / 2
-
-    // this.addChild(this.testEnemy)
 
     const ui = new UI(screenWidth, screenHeight)
     this.addChild(ui)
@@ -79,7 +75,6 @@ export class GameScene extends Container implements Scene {
   update() {
     if (!this.player.isDead) {
       this.player.detectCollisions(this.enemyManager.enemies)
-      // this.player.detectCollisions([this.testEnemy])
     }
 
     if (GameState.state.health > 0 && this.time < Number.MAX_SAFE_INTEGER) {
@@ -95,5 +90,6 @@ export class GameScene extends Container implements Scene {
 
   beforeDelete() {
     this.stateUnsubscribeFunction()
+    this.enemyManager.cleanUp()
   }
 }

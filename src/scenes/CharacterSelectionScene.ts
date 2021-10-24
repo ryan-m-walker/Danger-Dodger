@@ -67,13 +67,39 @@ export class CharacterSelectionScene extends Container implements Scene {
     const text = new Text("Choose Your Character:", textStyle)
     text.anchor.set(0.5, 0.5)
     text.x = SceneManager.app.screen.width / 2
-    text.y = 112 * SCALE
+    text.y = 75 * SCALE
     this.addChild(text)
 
     this.initializePlayerSprite(Character.MaskDude)
     this.initializePlayerSprite(Character.NinjaFrog)
     this.initializePlayerSprite(Character.PinkMan)
     this.initializePlayerSprite(Character.VirtualGuy)
+
+    const controlsText = new Text("Controls:", textStyle)
+    controlsText.anchor.set(0.5, 0.5)
+    controlsText.x = SceneManager.app.screen.width / 2
+    controlsText.y = 200 * SCALE
+    this.addChild(controlsText)
+
+    const keyTextStyle = new TextStyle({
+      fill: Color.WHITE,
+      fontFamily: Resources.UPHEAVAL,
+      fontSize: 12 * SCALE,
+      letterSpacing: 2,
+      align: "center",
+    })
+
+    const arrowsText = new Text("Left/Right Arrows = Move", keyTextStyle)
+    arrowsText.anchor.set(0.5, 0.5)
+    arrowsText.x = SceneManager.app.screen.width / 2
+    arrowsText.y = 230 * SCALE
+    this.addChild(arrowsText)
+
+    const spaceText = new Text("Space = Dash", keyTextStyle)
+    spaceText.anchor.set(0.5, 0.5)
+    spaceText.x = SceneManager.app.screen.width / 2
+    spaceText.y = 250 * SCALE
+    this.addChild(spaceText)
 
     this.setSelectedCharacter(0)
   }
@@ -92,7 +118,7 @@ export class CharacterSelectionScene extends Container implements Scene {
     const halfCharacterWidth = 16 * SCALE
     const x = (space / 4 - halfCharacterWidth) * (index + 1) + SCREEN_PADDING
     sprite.x = x
-    sprite.y = this.screenHeight / 2
+    sprite.y = 120 * SCALE
     sprite.tint = NOT_SELECTED_TINT
     sprite.animationSpeed = spriteSheet.animations[animationKey].length / 60
 
@@ -113,7 +139,7 @@ export class CharacterSelectionScene extends Container implements Scene {
       this.setSelectedCharacter(newIndex < 0 ? 3 : newIndex)
     }
 
-    if (e.code === Key.Space || e.code === Key.Enter) {
+    if (e.code === Key.Enter) {
       GameState.setState({
         character: indexToCharacter[this.selectedCharacter],
       })

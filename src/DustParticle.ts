@@ -45,6 +45,7 @@ export class DustParticle extends Container {
 
   remove() {
     Ticker.shared.remove(this.update, this)
+    this.sprite.destroy()
     this.destroy()
   }
 }

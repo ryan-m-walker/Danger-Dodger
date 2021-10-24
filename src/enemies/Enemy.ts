@@ -53,6 +53,7 @@ export class Enemy extends Container {
 
   remove() {
     Ticker.shared.remove(this.update, this)
+    this.sprite.destroy()
     this.destroy()
   }
 

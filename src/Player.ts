@@ -12,16 +12,17 @@ import GameState from "./GameState"
 import Input from "./Input"
 import { Key } from "./Key"
 import { Vector } from "./Vector"
-import { getChance, getRandomInt } from "./random"
+import { getChance, getRandomFloat, getRandomInt } from "./random"
 import { DustParticle } from "./DustParticle"
 import { Resources, SCALE } from "./constants"
 import SceneManager from "./SceneManager"
+import { MotionBlurFilter } from "@pixi/filter-motion-blur"
 
 const ACCELERATION = 0.75
 const MAX_VELOCITY = 6
 const MAX_DASH_VELOCITY = 20
 const INJURED_COOL_DOWN_TIME = 65
-const DASH_COOL_DOWN = 20
+const DASH_COOL_DOWN = 8
 
 const SPRITE_PADDING_H = 6 * SCALE
 const SPRITE_PADDING_V = 8 * SCALE
@@ -47,8 +48,8 @@ export class Player extends Container {
   private playerState = PlayerState.IDLE
 
   // movement
-  private velocity = new Vector(0, 0)
-  private acceleration = new Vector(0, 0)
+  private velocity = Vector.Zero()
+  private acceleration = Vector.Zero()
   private direction = 1
 
   // injured
@@ -63,6 +64,8 @@ export class Player extends Container {
   // dash
   private dashCoolDown = 0
   private isDashPressed = false
+  private velocityBeforeDash = Vector.Zero()
+  private accelerationBeforeDash = Vector.Zero()
 
   constructor() {
     super()
@@ -115,6 +118,10 @@ export class Player extends Container {
           this.setTexture("dash")
           this.dashCoolDown = 0
           this.isDashPressed = true
+          this.sprite.filters = [new MotionBlurFilter([12, 0])]
+          // save current vel and acc to maintain after player done dashing
+          this.velocityBeforeDash = this.velocity
+          this.accelerationBeforeDash = this.acceleration
           break
         }
       }
@@ -130,7 +137,6 @@ export class Player extends Container {
 
   setTexture(texture: string) {
     const key = this.getTextureKey(texture)
-    console.log(key)
     this.sprite.textures = [this.spriteSheet.textures[key]]
   }
 
@@ -141,19 +147,39 @@ export class Player extends Container {
     }
   }
 
+  emitDust() {
+    const yPos = this.sprite.y + this.sprite.height * 0.5
+    if (this.isDashing()) {
+      const numberOfDustParticles = getRandomInt(0, 6)
+      for (let i = 0; i < numberOfDustParticles; i++) {
+        const dustParticle = new DustParticle(
+          this.sprite.x,
+          getRandomFloat(yPos - 3, yPos - 5)
+        )
+        this.addChild(dustParticle)
+      }
+    } else {
+      if (getChance(10)) {
+        const dustParticle = new DustParticle(
+          this.sprite.x,
+          getRandomFloat(yPos - 3, yPos - 5)
+        )
+        this.addChild(dustParticle)
+      }
+    }
+  }
+
   update(deltaTime: number) {
+    if (this.isDead) {
+      return
+    }
+
     if (!GameState.state.isPaused) {
       if (
         this.playerState === PlayerState.RUNNING ||
         this.playerState === PlayerState.DASHING
       ) {
-        if (getChance(this.playerState === PlayerState.DASHING ? 2 : 6)) {
-          const dustParticle = new DustParticle(
-            this.sprite.x,
-            this.sprite.y + this.sprite.height / 2 - 3
-          )
-          this.addChild(dustParticle)
-        }
+        this.emitDust()
       }
 
       // used to force player to tap space instead of holding down each dash
@@ -167,7 +193,8 @@ export class Player extends Container {
         if (Input.keyDown(Key.Space)) {
           if (!this.isDashPressed) {
             this.setState(PlayerState.DASHING)
-            this.acceleration.add(new Vector(20 * this.direction, 0))
+            // this.acceleration.add(new Vector(20 * this.direction, 0))
+            this.velocity = new Vector(20 * this.direction, 0)
           }
         } else if (
           Input.keyDown(Key.ArrowRight) &&
@@ -189,7 +216,10 @@ export class Player extends Container {
       } else {
         this.dashCoolDown += 1
         if (this.dashCoolDown >= DASH_COOL_DOWN) {
+          this.sprite.filters = []
           this.setState(PlayerState.IDLE)
+          this.velocity = this.velocityBeforeDash
+          this.acceleration = this.accelerationBeforeDash
         }
       }
 
@@ -212,8 +242,10 @@ export class Player extends Container {
         this.sprite.x += this.velocity.x * deltaTime
       }
 
-      this.decelerate()
-      this.acceleration = new Vector(0, 0)
+      if (!this.isDashing()) {
+        this.decelerate()
+        this.acceleration = new Vector(0, 0)
+      }
 
       if (this.isInjured) {
         if (this.injuredCoolDown % 5 === 0) {
@@ -228,6 +260,10 @@ export class Player extends Container {
         this.injuredCoolDown += 1
       }
     }
+  }
+
+  isDashing() {
+    return this.playerState === PlayerState.DASHING
   }
 
   gravity() {
@@ -332,14 +368,12 @@ export class Player extends Container {
   }
 
   kill() {
-    Ticker.shared.remove(this.update, this)
     this.isDead = true
-    this.destroy()
+    this.sprite.destroy()
     GameState.setState({ isGameOver: true })
   }
 
   getHitBox() {
-    // const localBounds = this.getLocalBounds()
     const globalPosition = this.sprite.getGlobalPosition()
     return {
       x: globalPosition.x - this.sprite.width * 0.5 + SPRITE_PADDING_H,

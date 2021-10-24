@@ -1,4 +1,8 @@
 export class Vector {
+  static Zero() {
+    return new Vector(0, 0)
+  }
+
   constructor(public x: number, public y: number) {}
 
   clone(): Vector {
