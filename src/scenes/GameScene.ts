@@ -1,4 +1,4 @@
-import { Container, filters } from "pixi.js"
+import { Container, filters, Graphics } from "pixi.js"
 import { MotionBlurFilter } from "@pixi/filter-motion-blur"
 import { RGBSplitFilter } from "@pixi/filter-rgb-split"
 import { TestEnemy } from "../enemies/TestEnemy"
@@ -12,6 +12,7 @@ import { getRandomInt } from "../random"
 import SceneManager from "../SceneManager"
 import { UI } from "../UI"
 import { Scene } from "./Scene"
+import { Color } from "../constants"
 
 export class GameScene extends Container implements Scene {
   static id = "game"
@@ -50,11 +51,19 @@ export class GameScene extends Container implements Scene {
 
     this.filters = this.getDefaultFilters()
 
-    this.stateUnsubscribeFunction = GameState.subscribe((newState) => {
-      if (newState.isGameOver === true) {
-        document.addEventListener("keydown", this.keyDownEventHandler)
+    this.stateUnsubscribeFunction = GameState.subscribe(
+      (newState, prevState) => {
+        if (newState.isGameOver === true) {
+          document.addEventListener("keydown", this.keyDownEventHandler)
+        }
+
+        if (newState.time !== prevState.time) {
+          if (newState.time % 25 === 0) {
+            GameState.setState({ difficulty: newState.difficulty + 1 })
+          }
+        }
       }
-    })
+    )
   }
 
   // TODO: rename
@@ -77,6 +86,7 @@ export class GameScene extends Container implements Scene {
       health: 100,
       isGameOver: false,
       time: 0,
+      difficulty: 1,
     })
 
     this.enemyManager.restart()
@@ -111,6 +121,14 @@ export class GameScene extends Container implements Scene {
     if (!this.player.isDead) {
       this.player.detectCollisions(this.enemyManager.enemies)
     }
+
+    // for (const enemy of this.enemyManager.enemies) {
+    //   const hitBox = enemy.getHitBox()
+    //   const box = new Graphics()
+    //   box.beginFill(Color.RED.hex, 0.1)
+    //   box.drawRect(hitBox.x, hitBox.y, hitBox.w, hitBox.h)
+    //   this.addChild(box)
+    // }
 
     if (GameState.state.health > 0 && this.time < Number.MAX_SAFE_INTEGER) {
       const time = Date.now()

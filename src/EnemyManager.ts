@@ -6,7 +6,7 @@ import { Saw } from "./enemies/Saw"
 import { SpikeBall } from "./enemies/SpikeBall"
 import { SpikeHead } from "./enemies/SpikeHead"
 import GameState, { UnsubscribeFunction } from "./GameState"
-import { getRandomInt } from "./random"
+import { getChance, getRandomInt } from "./random"
 import SceneManager from "./SceneManager"
 
 type EnemyWave = {
@@ -18,24 +18,57 @@ type EnemyWave = {
 export class EnemyManager {
   enemies: Enemy[] = []
 
-  enemyWaves: EnemyWave[] = []
+  enemyChances = [
+    {
+      enemy: Saw,
+      chance: 20,
+      max: 2,
+    },
+    {
+      enemy: SpikeHead,
+      chance: 30,
+      max: 1,
+    },
+    {
+      enemy: SpikeBall,
+      chance: 16,
+      max: 3,
+    },
+    {
+      enemy: RockHead,
+      chance: 35,
+      max: 1,
+    },
+  ]
 
   private stateUnsubscribeFunction: UnsubscribeFunction
 
   start = () => {
-    this.enemyWaves = this.getInitialWaves()
-
     Ticker.shared.add(this.update, this)
 
-    this.stateUnsubscribeFunction = GameState.subscribe((newState) => {
-      for (const wave of this.enemyWaves) {
-        wave.coolDownTime += 1
-        if (wave.coolDownTime >= wave.coolDown) {
-          wave.enemies.forEach(this.spawnEnemy)
-          wave.coolDownTime = 0
+    this.stateUnsubscribeFunction = GameState.subscribe(
+      (newState, prevState) => {
+        // wait a bit before starting
+        if (newState.time < 3) {
+          return
+        }
+
+        if (newState.time !== prevState.time) {
+          for (const enemy of this.enemyChances) {
+            for (
+              let chance = 0;
+              chance < enemy.max + GameState.state.difficulty;
+              chance++
+            ) {
+              const chance = enemy.chance - GameState.state.difficulty
+              if (getChance(chance >= 2 ? chance : 2)) {
+                this.spawnEnemy(enemy.enemy)
+              }
+            }
+          }
         }
       }
-    })
+    )
   }
 
   getInitialWaves(): EnemyWave[] {
@@ -57,7 +90,6 @@ export class EnemyManager {
       SceneManager.currentScene.removeChild(enemy)
     }
 
-    this.enemyWaves = this.getInitialWaves()
     this.enemies = []
   }
 

@@ -7,6 +7,7 @@ export type State = {
   isGameOver: boolean
   isPaused: boolean
   time: number
+  difficulty: number
 }
 
 export type StateSubscriptionHandler = (
@@ -29,6 +30,7 @@ class GameState {
     isGameOver: false,
     time: 0,
     isPaused: false,
+    difficulty: 1,
   })
 
   private subscriptions: StateSubscription[] = []
