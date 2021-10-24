@@ -1,43 +1,102 @@
-import { Container, TextStyle, Text } from "pixi.js"
+import { Container, TextStyle, Text, Sprite, Ticker } from "pixi.js"
+import { Color, Resources, SCALE } from "./constants"
 import GameState from "./GameState"
 
 export class UI extends Container {
-  style = new TextStyle({
-    align: "left",
-    fill: "#cc3048",
-    fontSize: 24,
-    fontWeight: "bolder",
-    letterSpacing: 1,
-  })
+  hpText: Text
+  gameOverText: Sprite
+  gameOverSubText: Sprite
 
-  text = new Text("Health: " + GameState.state.health, this.style)
+  timeText: Text
 
   constructor(private screenWidth: number, private screenHeight: number) {
     super()
 
-    this.text.x = 16
-    this.text.y = 16
+    const timeTextStyle = new TextStyle({
+      align: "right",
+      fontSize: 20 * SCALE,
+      fontWeight: "bold",
+      letterSpacing: 3,
+      fill: Color.WHITE,
+      fontFamily: Resources.UPHEAVAL,
+    })
 
-    this.addChild(this.text)
-    GameState.subscribe((newState) => {
-      if (newState.health <= 0) {
-        const gameOverTextStyle = new TextStyle({
-          align: "center",
-          fill: "#cc3048",
-          fontSize: 45,
-          fontWeight: "bold",
-          letterSpacing: 1,
-        })
+    this.timeText = new Text(GameState.state.time.toString(), timeTextStyle)
+    this.timeText.anchor.set(1, 0)
+    this.timeText.x = this.screenWidth - 16 * SCALE
+    this.timeText.y = 16 * SCALE
+    this.addChild(this.timeText)
 
-        const gameOverText = new Text("Game Over...", gameOverTextStyle)
-        gameOverText.x = this.screenWidth / 2 - gameOverText.width / 2
-        gameOverText.y = this.screenHeight / 2 - gameOverText.height / 2
+    const hpTextStyle = new TextStyle({
+      align: "left",
+      fontSize: 20 * SCALE,
+      fontWeight: "bold",
+      letterSpacing: 3,
+      fill: Color.WHITE,
+      fontFamily: Resources.UPHEAVAL,
+    })
 
-        this.removeChild(this.text)
-        this.addChild(gameOverText)
+    this.hpText = new Text(`HP: ${GameState.state.health}%`, hpTextStyle)
+    this.hpText.anchor.set(0, 0)
+    this.hpText.x = 16 * SCALE
+    this.hpText.y = 16 * SCALE
+    this.addChild(this.hpText)
+
+    GameState.subscribe((newState, prevState) => {
+      if (prevState.isGameOver === true && newState.isGameOver === false) {
+        this.clearGameOverText()
+      }
+
+      this.timeText.text = newState.time.toString()
+
+      if (prevState.isGameOver === false && newState.isGameOver === true) {
+        this.showGameOverText()
+        this.hpText.text = "HP: 0%"
       } else {
-        this.text.text = "Health: " + newState.health
+        this.hpText.text = `HP: ${GameState.state.health}%`
       }
     })
+  }
+
+  showGameOverText() {
+    const gameOverTextStyle = new TextStyle({
+      align: "center",
+      fill: Color.RED,
+      fontSize: 42 * SCALE,
+      fontWeight: "bold",
+      letterSpacing: 3,
+      fontFamily: Resources.UPHEAVAL,
+    })
+
+    this.gameOverText = new Text("GAME OVER", gameOverTextStyle)
+    this.gameOverText.anchor.set(0.5, 0.5)
+    this.gameOverText.x = this.screenWidth / 2
+    this.gameOverText.y = this.screenHeight / 2 - 16 * SCALE
+
+    this.addChild(this.gameOverText)
+
+    const gameOverSubTextStyle = new TextStyle({
+      align: "center",
+      fill: Color.WHITE,
+      fontSize: 12 * SCALE,
+      fontWeight: "bold",
+      letterSpacing: 3,
+      fontFamily: Resources.UPHEAVAL,
+    })
+
+    this.gameOverSubText = new Text(
+      "Press Enter to try again",
+      gameOverSubTextStyle
+    )
+    this.gameOverSubText.anchor.set(0.5, 0.5)
+    this.gameOverSubText.x = this.screenWidth / 2
+    this.gameOverSubText.y = this.screenHeight / 2 + 25 * SCALE
+
+    this.addChild(this.gameOverSubText)
+  }
+
+  clearGameOverText() {
+    this.removeChild(this.gameOverText)
+    this.removeChild(this.gameOverSubText)
   }
 }

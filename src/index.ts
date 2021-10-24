@@ -1,15 +1,19 @@
 import { Application, Loader, Ticker, Graphics } from "pixi.js"
+import MemoryStats from "memory-stats"
+import { WebfontLoaderPlugin } from "pixi-webfont-loader"
+
 import { EnemyManager } from "./EnemyManager"
 import { GameMap } from "./Map"
 import { Player } from "./Player"
 import { UI } from "./UI"
-
-import MemoryStats from "memory-stats"
 import { TestEnemy } from "./enemies/TestEnemy"
-import { SCALE } from "./constants"
+import { Resources, SCALE } from "./constants"
+import SceneManager from "./SceneManager"
+import { CharacterSelectionScene } from "./scenes/CharacterSelectionScene"
+import Input from "./Input"
+import { GameScene } from "./scenes/GameScene"
 
-const RENDER_HIT_BOX = false
-
+console.log("Starting Memory Stats")
 const stats = new MemoryStats()
 
 stats.domElement.style.position = "fixed"
@@ -23,54 +27,57 @@ requestAnimationFrame(function rAFloop() {
   requestAnimationFrame(rAFloop)
 })
 
-const app = new Application({
-  view: document.getElementById("pixi-canvas") as HTMLCanvasElement,
-  resolution: window.devicePixelRatio || 1,
-  autoDensity: true,
-  backgroundColor: 0x6495ed,
-  width: 320 * SCALE,
-  height: 320 * SCALE,
-})
+Loader.registerPlugin(WebfontLoaderPlugin)
 
-Loader.shared.add("sprites", "sprites/Sprites.json")
-Loader.shared.add("floor", "sprites/Floor.png")
-Loader.shared.add("dust", "sprites/DustParticle.png")
+Loader.shared.add(Resources.SPRITES, "sprites/sprites.json")
+Loader.shared.add(Resources.UPHEAVAL, "fonts/upheavtt.ttf")
 Loader.shared.load(setup)
 
 function setup() {
-  const enemyManager = new EnemyManager(app)
-  // enemyManager.start()
+  Input.start()
 
-  const map = new GameMap()
-  app.stage.addChild(map)
+  SceneManager.initialize()
+  SceneManager.addScene(
+    CharacterSelectionScene.id,
+    new CharacterSelectionScene()
+  )
+  SceneManager.addScene(GameScene.id, new GameScene())
 
-  const player = new Player(app.screen.width, app.screen.height)
-  app.stage.addChild(player)
-
-  const ui = new UI(app.screen.width, app.screen.height)
-  app.stage.addChild(ui)
-
-  // const testEnemy = new TestEnemy(app.screen.width / 2 + 100, app.screen.height)
-  // app.stage.addChild(testEnemy)
-
-  let hitBox: Graphics
-
-  // if (RENDER_HIT_BOX) {
-  //   hitBox = new Graphics()
-  //   hitBox.alpha = 0.5
-  //   hitBox.beginFill(0xff0000)
-  //   const playerHitBox = testEnemy.getHitBox()
-  //   hitBox.drawRect(
-  //     playerHitBox.x,
-  //     playerHitBox.y,
-  //     playerHitBox.w,
-  //     playerHitBox.h
-  //   )
-  //   app.stage.addChild(hitBox)
-  // }
-
-  Ticker.shared.add((deltaTime) => {
-    player.detectCollisions(enemyManager.enemies)
-    // player.detectCollisions([testEnemy])
-  })
+  // SceneManager.setScene(CharacterSelectionScene.id)
+  SceneManager.setScene(GameScene.id)
 }
+
+// function setup() {
+//   const enemyManager = new EnemyManager(app)
+//   // enemyManager.start()
+
+//   const map = new GameMap()
+//   app.stage.addChild(map)
+
+//   const player = new Player(app.screen.width, app.screen.height)
+//   app.stage.addChild(player)
+
+//   const ui = new UI(app.screen.width, app.screen.height)
+//   app.stage.addChild(ui)
+
+//   const testEnemy = new TestEnemy(app.screen.width / 2 - 100, app.screen.height)
+//   app.stage.addChild(testEnemy)
+//   const hitBox = new Graphics()
+//   hitBox.alpha = 0.5
+//   hitBox.beginFill(0xff0000)
+//   const playerHitBox = testEnemy.getHitBox()
+//   hitBox.drawRect(
+//     playerHitBox.x,
+//     playerHitBox.y,
+//     playerHitBox.w,
+//     playerHitBox.h
+//   )
+//   app.stage.addChild(hitBox)
+
+//   Ticker.shared.add((deltaTime) => {
+//     if (!player.isDead) {
+//       // player.detectCollisions(enemyManager.enemies)
+//       player.detectCollisions([testEnemy])
+//     }
+//   })
+// }

@@ -1,5 +1,5 @@
 import { Container, Sprite, Loader } from "pixi.js"
-import { SCALE } from "./constants"
+import { Resources, SCALE } from "./constants"
 
 export class GameMap extends Container {
   sprite: Sprite
@@ -7,7 +7,8 @@ export class GameMap extends Container {
   constructor() {
     super()
 
-    this.sprite = Sprite.from(Loader.shared.resources["floor"].texture)
+    const spriteSheet = Loader.shared.resources[Resources.SPRITES].spritesheet
+    this.sprite = Sprite.from(spriteSheet.textures["map2.png"])
     this.sprite.scale.set(SCALE, SCALE)
     this.addChild(this.sprite)
   }

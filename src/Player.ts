@@ -12,28 +12,32 @@ import GameState from "./GameState"
 import Input from "./Input"
 import { Key } from "./Key"
 import { Vector } from "./Vector"
-import { getRandomInt } from "./random"
+import { getChance, getRandomInt } from "./random"
 import { DustParticle } from "./DustParticle"
-import { SCALE } from "./constants"
+import { Resources, SCALE } from "./constants"
+import SceneManager from "./SceneManager"
 
-const FRICTION = 0.5
 const ACCELERATION = 0.75
 const MAX_VELOCITY = 6
+const MAX_DASH_VELOCITY = 20
+const INJURED_COOL_DOWN_TIME = 65
+const DASH_COOL_DOWN = 20
 
 const SPRITE_PADDING_H = 6 * SCALE
 const SPRITE_PADDING_V = 8 * SCALE
 
 enum PlayerState {
   RUNNING,
-  JUMPING,
   IDLE,
   INJURED,
+  DASHING,
 }
 
 export class Player extends Container {
-  sortableChildren = true
-
   hitBox: Graphics
+  isDead = false
+
+  sortableChildren = true
 
   private readonly windowWidth: number
   private readonly windowHeight: number
@@ -42,28 +46,39 @@ export class Player extends Container {
   private spriteSheet: Spritesheet
   private playerState = PlayerState.IDLE
 
+  // movement
   private velocity = new Vector(0, 0)
   private acceleration = new Vector(0, 0)
   private direction = 1
-  private isInjured = false
 
+  // injured
+  private isInjured = false
+  private injuredCoolDown = 0
+  private injuredBlinkOn = true
+
+  // position
   private hitBoxWidth: number
   private hitBoxHeight: number
 
-  constructor(windowWidth: number, windowHeight: number) {
+  // dash
+  private dashCoolDown = 0
+  private isDashPressed = false
+
+  constructor() {
     super()
 
-    this.windowWidth = windowWidth
-    this.windowHeight = windowHeight
+    this.windowWidth = SceneManager.app.screen.width
+    this.windowHeight = SceneManager.app.screen.height
 
-    this.spriteSheet = Loader.shared.resources["sprites"].spritesheet
-    this.sprite = new AnimatedSprite(this.spriteSheet.animations["Player/Idle"])
-    this.sprite.animationSpeed =
-      this.spriteSheet.animations["Player/Idle"].length / 60
+    this.spriteSheet = Loader.shared.resources[Resources.SPRITES].spritesheet
+    const animation = this.spriteSheet.animations[this.getAnimationKey("idle")]
+    this.sprite = new AnimatedSprite(animation)
+    this.sprite.animationSpeed = animation.length / 60
     this.sprite.scale.set(SCALE, SCALE)
     this.sprite.x = this.windowWidth / 2
-    this.sprite.y = this.windowHeight - this.sprite.height * 2
-    this.sprite.anchor.set(0.5, 1)
+    this.sprite.y =
+      this.windowHeight - this.sprite.height * 2 - this.sprite.height / 2
+    this.sprite.anchor.set(0.5, 0.5)
     this.sprite.zIndex = 100
 
     this.sprite.play()
@@ -76,33 +91,47 @@ export class Player extends Container {
     Ticker.shared.add(this.update, this)
   }
 
+  getAnimationKey(key: string) {
+    return `${GameState.state.character}/${key}/${key}`
+  }
+
+  getTextureKey(key: string) {
+    return `${GameState.state.character}/${key}.png`
+  }
+
   setState(state: PlayerState) {
     if (state !== this.playerState) {
       this.playerState = state
       switch (state) {
         case PlayerState.RUNNING: {
-          this.setAnimation("Player/Run")
+          this.setAnimation("run")
           break
         }
         case PlayerState.IDLE: {
-          this.setAnimation("Player/Idle")
+          this.setAnimation("idle")
           break
         }
-        case PlayerState.JUMPING: {
-          this.sprite.textures = [
-            this.spriteSheet.textures["Jump/PlayerJump.png"],
-          ]
+        case PlayerState.DASHING: {
+          this.setTexture("dash")
+          this.dashCoolDown = 0
+          this.isDashPressed = true
+          break
         }
       }
-      this.sprite.play()
     }
   }
 
   setAnimation(animation: string) {
-    this.sprite.textures = this.spriteSheet.animations[animation]
-    this.sprite.animationSpeed =
-      this.spriteSheet.animations[animation].length / 60
+    const key = this.getAnimationKey(animation)
+    this.sprite.textures = this.spriteSheet.animations[key]
+    this.sprite.animationSpeed = this.spriteSheet.animations[key].length / 60
     this.sprite.play()
+  }
+
+  setTexture(texture: string) {
+    const key = this.getTextureKey(texture)
+    console.log(key)
+    this.sprite.textures = [this.spriteSheet.textures[key]]
   }
 
   setDirection(direction: 1 | -1) {
@@ -113,45 +142,92 @@ export class Player extends Container {
   }
 
   update(deltaTime: number) {
-    if (this.playerState === PlayerState.RUNNING) {
-      if (getRandomInt(0, 4) === 4) {
-        const dustParticle = new DustParticle(this.sprite.x, this.sprite.y - 5)
-        this.addChild(dustParticle)
+    if (!GameState.state.isPaused) {
+      if (
+        this.playerState === PlayerState.RUNNING ||
+        this.playerState === PlayerState.DASHING
+      ) {
+        if (getChance(this.playerState === PlayerState.DASHING ? 2 : 6)) {
+          const dustParticle = new DustParticle(
+            this.sprite.x,
+            this.sprite.y + this.sprite.height / 2 - 3
+          )
+          this.addChild(dustParticle)
+        }
+      }
+
+      // used to force player to tap space instead of holding down each dash
+      if (this.isDashPressed) {
+        if (!Input.keyDown(Key.Space)) {
+          this.isDashPressed = false
+        }
+      }
+
+      if (this.playerState !== PlayerState.DASHING) {
+        if (Input.keyDown(Key.Space)) {
+          if (!this.isDashPressed) {
+            this.setState(PlayerState.DASHING)
+            this.acceleration.add(new Vector(20 * this.direction, 0))
+          }
+        } else if (
+          Input.keyDown(Key.ArrowRight) &&
+          !Input.keyDown(Key.ArrowLeft)
+        ) {
+          this.setState(PlayerState.RUNNING)
+          this.acceleration.add(new Vector(ACCELERATION, 0))
+          this.setDirection(1)
+        } else if (
+          Input.keyDown(Key.ArrowLeft) &&
+          !Input.keyDown(Key.ArrowRight)
+        ) {
+          this.setState(PlayerState.RUNNING)
+          this.acceleration.add(new Vector(-ACCELERATION, 0))
+          this.setDirection(-1)
+        } else {
+          this.setState(PlayerState.IDLE)
+        }
+      } else {
+        this.dashCoolDown += 1
+        if (this.dashCoolDown >= DASH_COOL_DOWN) {
+          this.setState(PlayerState.IDLE)
+        }
+      }
+
+      this.velocity.add(this.acceleration)
+      this.clampVelocity()
+
+      const playerHitBox = this.getHitBox()
+      const isGoingOffLeftEdge = playerHitBox.x + this.velocity.x < 0
+      const isGoingOffRightEdge =
+        this.sprite.x + playerHitBox.w * 0.5 + this.velocity.x >
+        this.windowWidth
+
+      if (isGoingOffLeftEdge) {
+        this.sprite.x = this.hitBoxWidth * 0.5
+        this.velocity = new Vector(0, 0)
+      } else if (isGoingOffRightEdge) {
+        this.sprite.x = this.windowWidth - this.hitBoxWidth * 0.5
+        this.velocity = new Vector(0, 0)
+      } else {
+        this.sprite.x += this.velocity.x * deltaTime
+      }
+
+      this.decelerate()
+      this.acceleration = new Vector(0, 0)
+
+      if (this.isInjured) {
+        if (this.injuredCoolDown % 5 === 0) {
+          this.injuredBlinkOn = !this.injuredBlinkOn
+          this.sprite.alpha = this.injuredBlinkOn ? 0.25 : 0.75
+        }
+
+        if (this.injuredCoolDown >= INJURED_COOL_DOWN_TIME) {
+          this.isInjured = false
+          this.sprite.alpha = 1
+        }
+        this.injuredCoolDown += 1
       }
     }
-
-    if (Input.keyDown(Key.ArrowRight) && !Input.keyDown(Key.ArrowLeft)) {
-      this.setState(PlayerState.RUNNING)
-      this.acceleration.add(new Vector(ACCELERATION, 0))
-      this.setDirection(1)
-    } else if (Input.keyDown(Key.ArrowLeft) && !Input.keyDown(Key.ArrowRight)) {
-      this.setState(PlayerState.RUNNING)
-      this.acceleration.add(new Vector(-ACCELERATION, 0))
-      this.setDirection(-1)
-    } else {
-      this.setState(PlayerState.IDLE)
-    }
-
-    this.velocity.add(this.acceleration)
-    this.clampVelocity()
-
-    const playerHitBox = this.getHitBox()
-    const isGoingOffLeftEdge = playerHitBox.x + this.velocity.x < 0
-    const isGoingOffRightEdge =
-      this.sprite.x + playerHitBox.w * 0.5 + this.velocity.x > this.windowWidth
-
-    if (isGoingOffLeftEdge) {
-      this.sprite.x = this.hitBoxWidth * 0.5
-      this.velocity = new Vector(0, 0)
-    } else if (isGoingOffRightEdge) {
-      this.sprite.x = this.windowWidth - this.hitBoxWidth * 0.5
-      this.velocity = new Vector(0, 0)
-    } else {
-      this.sprite.x += this.velocity.x * deltaTime
-    }
-
-    this.decelerate()
-    this.acceleration = new Vector(0, 0)
   }
 
   gravity() {
@@ -161,12 +237,17 @@ export class Player extends Container {
   }
 
   clampVelocity() {
-    if (this.velocity.x > MAX_VELOCITY) {
-      this.velocity.x = MAX_VELOCITY
+    const max =
+      this.playerState === PlayerState.DASHING
+        ? MAX_DASH_VELOCITY
+        : MAX_VELOCITY
+
+    if (this.velocity.x > max) {
+      this.velocity.x = max
     }
 
-    if (this.velocity.x < -MAX_VELOCITY) {
-      this.velocity.x = -MAX_VELOCITY
+    if (this.velocity.x < -max) {
+      this.velocity.x = -max
     }
   }
 
@@ -198,15 +279,14 @@ export class Player extends Container {
       // only do fine-grained collision detection if enemy is even reasonably close
       if (this.isClose(enemy)) {
         const enemyBox = enemy.getHitBox()
-
         if (
           playerBox.x < enemyBox.x + enemyBox.w &&
           playerBox.x + playerBox.w > enemyBox.x &&
           playerBox.y < enemyBox.y + enemyBox.h &&
           playerBox.h + playerBox.y > enemyBox.y
         ) {
-          this.isInjured = true
-          this.sprite.alpha = 0.5
+          this.setIsInjured()
+
           GameState.setState((state) => {
             const newHealth = state.health - enemy.damage
             return { health: newHealth >= 0 ? newHealth : 0 }
@@ -215,18 +295,22 @@ export class Player extends Container {
           if (GameState.state.health <= 0) {
             this.kill()
           }
-
-          setTimeout(() => {
-            this.isInjured = false
-            this.sprite.alpha = 1
-          }, 2000)
         }
       }
     }
   }
 
+  setIsInjured() {
+    this.sprite.alpha = 0.5
+    this.isInjured = true
+    this.injuredCoolDown = 0
+    this.injuredBlinkOn = true
+  }
+
+  // TODO: fine tune
   isClose(enemy: Enemy) {
-    const THRESHOLD = 50
+    return true
+    const THRESHOLD = 50 * SCALE
 
     if (enemy.sprite.x > this.sprite.x + THRESHOLD) {
       return false
@@ -249,14 +333,17 @@ export class Player extends Container {
 
   kill() {
     Ticker.shared.remove(this.update, this)
+    this.isDead = true
     this.destroy()
+    GameState.setState({ isGameOver: true })
   }
 
   getHitBox() {
-    const localBounds = this.getLocalBounds()
+    // const localBounds = this.getLocalBounds()
+    const globalPosition = this.sprite.getGlobalPosition()
     return {
-      x: localBounds.x + SPRITE_PADDING_H,
-      y: localBounds.y + SPRITE_PADDING_V,
+      x: globalPosition.x - this.sprite.width * 0.5 + SPRITE_PADDING_H,
+      y: globalPosition.y - this.sprite.height * 0.5 + SPRITE_PADDING_V,
       w: this.hitBoxWidth,
       h: this.hitBoxHeight,
     }

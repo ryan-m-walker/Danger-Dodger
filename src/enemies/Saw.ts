@@ -12,7 +12,7 @@ export class Saw extends Enemy {
 
   setup() {
     const spriteSheet = Loader.shared.resources.sprites.spritesheet
-    this.sprite = new AnimatedSprite(spriteSheet.animations["Saw"])
+    this.sprite = new AnimatedSprite(spriteSheet.animations["saw/saw"])
     if (this.sprite instanceof AnimatedSprite) {
       this.sprite.animationSpeed = 0.65
       this.sprite.play()

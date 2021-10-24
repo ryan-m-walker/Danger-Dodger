@@ -5,13 +5,7 @@ import { Saw } from "./enemies/Saw"
 import { SpikeBall } from "./enemies/SpikeBall"
 import { SpikeHead } from "./enemies/SpikeHead"
 import { getRandomInt } from "./random"
-
-const wave1 = {
-  200: [Saw, Saw],
-  300: [SpikeHead],
-  400: [Saw, SpikeBall, SpikeBall],
-  450: [SpikeBall, SpikeBall],
-}
+import SceneManager from "./SceneManager"
 
 export class EnemyManager {
   frame = 0
@@ -22,24 +16,36 @@ export class EnemyManager {
   rockHeadNumber = 1
 
   enemies: Enemy[] = []
-
-  constructor(private app: Application) {}
+  private interval: number
 
   start = () => {
+    this.startInterval()
     Ticker.shared.add(this.update, this)
+  }
+
+  startInterval() {
+    this.interval = window.setInterval(() => {
+      this.spawnEnemy(Saw)
+      this.spawnEnemy(Saw)
+      this.spawnEnemy(Saw)
+    }, 2000)
+  }
+
+  restart() {
+    for (const enemy of this.enemies) {
+      SceneManager.currentScene.removeChild(enemy)
+    }
+
+    this.enemies = []
+    window.clearInterval(this.interval)
+    this.startInterval()
   }
 
   private update() {
     this.frame += 1
 
-    if (wave1[this.frame]) {
-      for (const enemy of wave1[this.frame]) {
-        this.spawnEnemy(enemy)
-      }
-    }
-
     for (const enemy of this.enemies) {
-      if (enemy.sprite.y > this.app.screen.height) {
+      if (enemy.sprite.y > SceneManager.app.screen.height) {
         enemy.remove()
         this.enemies = this.enemies.filter((e) => e.id !== enemy.id)
       }
@@ -47,9 +53,9 @@ export class EnemyManager {
   }
 
   private spawnEnemy = (EnemyClass: typeof Enemy) => {
-    const x = getRandomInt(0, this.app.screen.width)
-    const enemy = new EnemyClass(x, this.app.screen.height)
+    const x = getRandomInt(0, SceneManager.app.screen.width)
+    const enemy = new EnemyClass(x)
     this.enemies.push(enemy)
-    this.app.stage.addChild(enemy)
+    SceneManager.currentScene.addChild(enemy)
   }
 }

@@ -1,5 +1,5 @@
 import { Container, Sprite, Loader, Ticker } from "pixi.js"
-import { SCALE } from "./constants"
+import { Resources, SCALE } from "./constants"
 import { getRandomFloat, getRandomInt } from "./random"
 
 export class DustParticle extends Container {
@@ -10,7 +10,8 @@ export class DustParticle extends Container {
   constructor(x: number, y: number) {
     super()
 
-    this.sprite = Sprite.from(Loader.shared.resources.dust.texture)
+    const spriteSheet = Loader.shared.resources[Resources.SPRITES]
+    this.sprite = Sprite.from(spriteSheet.textures["dustParticle.png"])
 
     const gitterX = getRandomFloat(-4, 4)
     const gitterY = getRandomFloat(-4, 4)
