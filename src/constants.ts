@@ -1,9 +1,11 @@
+import { Color as ColorObject } from "./Color"
+
 export const SCALE = 1.5
 
 export const Color = {
-  BLACK: 0x211f30,
-  RED: 0xe44a4a,
-  WHITE: 0xffffff,
+  BLACK: new ColorObject("#211f30"),
+  RED: new ColorObject("#e44a4a"),
+  WHITE: new ColorObject("#ffffff"),
 }
 
 export const Resources = {

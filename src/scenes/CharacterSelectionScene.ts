@@ -57,7 +57,7 @@ export class CharacterSelectionScene extends Container implements Scene {
     this.addChild(background)
 
     const textStyle = new TextStyle({
-      fill: Color.WHITE,
+      fill: Color.WHITE.hex,
       fontFamily: Resources.UPHEAVAL,
       fontSize: 16 * SCALE,
       letterSpacing: 2,
@@ -82,7 +82,7 @@ export class CharacterSelectionScene extends Container implements Scene {
     this.addChild(controlsText)
 
     const keyTextStyle = new TextStyle({
-      fill: Color.WHITE,
+      fill: Color.WHITE.hex,
       fontFamily: Resources.UPHEAVAL,
       fontSize: 12 * SCALE,
       letterSpacing: 2,

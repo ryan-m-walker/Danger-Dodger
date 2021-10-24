@@ -1,5 +1,5 @@
 import { Application, Ticker } from "pixi.js"
-import { SCALE } from "./constants"
+import { Color, SCALE } from "./constants"
 import { Scene } from "./scenes/Scene"
 
 class SceneManager {
@@ -23,7 +23,7 @@ class SceneManager {
         view: document.getElementById("pixi-canvas") as HTMLCanvasElement,
         resolution: window.devicePixelRatio || 1,
         autoDensity: true,
-        backgroundColor: 0x6495ed,
+        backgroundColor: Color.BLACK.hex,
         width: 320 * SCALE,
         height: 320 * SCALE,
       })

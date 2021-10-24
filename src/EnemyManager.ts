@@ -1,5 +1,6 @@
 import { Ticker, Application } from "pixi.js"
 import { Enemy } from "./enemies/Enemy"
+import { RockHead } from "./enemies/RockHead"
 
 import { Saw } from "./enemies/Saw"
 import { SpikeBall } from "./enemies/SpikeBall"
@@ -8,20 +9,42 @@ import GameState, { UnsubscribeFunction } from "./GameState"
 import { getRandomInt } from "./random"
 import SceneManager from "./SceneManager"
 
+type EnemyWave = {
+  coolDownTime: number
+  coolDown: number
+  enemies: Array<typeof Enemy>
+}
+
 export class EnemyManager {
   enemies: Enemy[] = []
+
+  enemyWaves: EnemyWave[] = []
 
   private stateUnsubscribeFunction: UnsubscribeFunction
 
   start = () => {
+    this.enemyWaves = this.getInitialWaves()
+
     Ticker.shared.add(this.update, this)
+
     this.stateUnsubscribeFunction = GameState.subscribe((newState) => {
-      if (newState.time % 4 === 0) {
-        this.spawnEnemy(Saw)
-        this.spawnEnemy(Saw)
-        this.spawnEnemy(Saw)
+      for (const wave of this.enemyWaves) {
+        wave.coolDownTime += 1
+        if (wave.coolDownTime >= wave.coolDown) {
+          wave.enemies.forEach(this.spawnEnemy)
+          wave.coolDownTime = 0
+        }
       }
     })
+  }
+
+  getInitialWaves(): EnemyWave[] {
+    return [
+      this.getNewWave(4, Saw, Saw, Saw),
+      this.getNewWave(6, SpikeHead),
+      this.getNewWave(8, SpikeBall, SpikeBall, SpikeBall, SpikeBall),
+      this.getNewWave(20, RockHead, RockHead),
+    ]
   }
 
   cleanUp() {
@@ -34,6 +57,7 @@ export class EnemyManager {
       SceneManager.currentScene.removeChild(enemy)
     }
 
+    this.enemyWaves = this.getInitialWaves()
     this.enemies = []
   }
 
@@ -52,5 +76,16 @@ export class EnemyManager {
     const enemy = new EnemyClass(x)
     this.enemies.push(enemy)
     SceneManager.currentScene.addChild(enemy)
+  }
+
+  private getNewWave(
+    coolDown: number,
+    ...enemies: Array<typeof Enemy>
+  ): EnemyWave {
+    return {
+      coolDownTime: 0,
+      coolDown,
+      enemies,
+    }
   }
 }

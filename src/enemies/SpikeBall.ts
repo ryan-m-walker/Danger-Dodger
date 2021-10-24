@@ -15,6 +15,6 @@ export class SpikeBall extends Enemy {
 
   setup() {
     const spriteSheet = Loader.shared.resources.sprites.spritesheet
-    this.sprite = Sprite.from(spriteSheet.textures["SpikeBall/SpikeBall.png"])
+    this.sprite = Sprite.from(spriteSheet.textures["spikeBall/spikeBall.png"])
   }
 }

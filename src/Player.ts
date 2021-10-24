@@ -17,6 +17,7 @@ import { DustParticle } from "./DustParticle"
 import { Resources, SCALE } from "./constants"
 import SceneManager from "./SceneManager"
 import { MotionBlurFilter } from "@pixi/filter-motion-blur"
+import { GameScene } from "./scenes/GameScene"
 
 const ACCELERATION = 0.75
 const MAX_VELOCITY = 6
@@ -312,24 +313,32 @@ export class Player extends Container {
     const playerBox = this.getHitBox()
 
     for (const enemy of enemies) {
-      // only do fine-grained collision detection if enemy is even reasonably close
-      if (this.isClose(enemy)) {
-        const enemyBox = enemy.getHitBox()
-        if (
-          playerBox.x < enemyBox.x + enemyBox.w &&
-          playerBox.x + playerBox.w > enemyBox.x &&
-          playerBox.y < enemyBox.y + enemyBox.h &&
-          playerBox.h + playerBox.y > enemyBox.y
-        ) {
-          this.setIsInjured()
+      // check isInjured again to prevent stacking of damage of enemies colliding in the same frame
+      // (two enemies hitting player at exact moment)
+      if (!this.isInjured) {
+        // only do fine-grained collision detection if enemy is even reasonably close
+        if (this.isClose(enemy)) {
+          const enemyBox = enemy.getHitBox()
+          if (
+            playerBox.x < enemyBox.x + enemyBox.w &&
+            playerBox.x + playerBox.w > enemyBox.x &&
+            playerBox.y < enemyBox.y + enemyBox.h &&
+            playerBox.h + playerBox.y > enemyBox.y
+          ) {
+            this.setIsInjured()
 
-          GameState.setState((state) => {
-            const newHealth = state.health - enemy.damage
-            return { health: newHealth >= 0 ? newHealth : 0 }
-          })
+            if (SceneManager.currentScene instanceof GameScene) {
+              SceneManager.currentScene.shake(5, 10)
+            }
 
-          if (GameState.state.health <= 0) {
-            this.kill()
+            GameState.setState((state) => {
+              const newHealth = state.health - enemy.damage
+              return { health: newHealth >= 0 ? newHealth : 0 }
+            })
+
+            if (GameState.state.health <= 0) {
+              this.kill()
+            }
           }
         }
       }

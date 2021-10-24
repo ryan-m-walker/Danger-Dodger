@@ -1,4 +1,5 @@
 import { Container } from "@pixi/display"
+import { MotionBlurFilter } from "@pixi/filter-motion-blur"
 import { Graphics } from "@pixi/graphics"
 import { Ticker } from "@pixi/ticker"
 import { Saw } from "../enemies/Saw"
@@ -8,6 +9,7 @@ import GameState, { UnsubscribeFunction } from "../GameState"
 import { Key } from "../Key"
 import { GameMap } from "../Map"
 import { Player } from "../Player"
+import { getRandomInt } from "../random"
 import SceneManager from "../SceneManager"
 import { UI } from "../UI"
 import { Scene } from "./Scene"
@@ -21,6 +23,11 @@ export class GameScene extends Container implements Scene {
 
   time = 0
   startTime: number
+
+  private isShaking = false
+  private shakeTime = 0
+  private shakeEnd: number
+  private shakeStrength = 3
 
   private stateUnsubscribeFunction: UnsubscribeFunction
 
@@ -73,6 +80,18 @@ export class GameScene extends Container implements Scene {
   }
 
   update() {
+    if (this.isShaking) {
+      this.x = getRandomInt(-this.shakeStrength, this.shakeStrength)
+      this.y = getRandomInt(-this.shakeStrength, this.shakeStrength)
+      this.shakeTime += 1
+      if (this.shakeTime >= this.shakeEnd) {
+        this.isShaking = false
+        this.x = 0
+        this.y = 0
+        this.filters = []
+      }
+    }
+
     if (!this.player.isDead) {
       this.player.detectCollisions(this.enemyManager.enemies)
     }
@@ -86,6 +105,14 @@ export class GameScene extends Container implements Scene {
         GameState.setState({ time: this.time })
       }
     }
+  }
+
+  shake(frames: number = 10, strength: number = 3) {
+    this.isShaking = true
+    this.shakeEnd = frames
+    this.shakeTime = 0
+    this.shakeStrength = strength
+    this.filters = [new MotionBlurFilter([8, 8])]
   }
 
   beforeDelete() {

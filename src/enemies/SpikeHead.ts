@@ -15,6 +15,6 @@ export class SpikeHead extends Enemy {
 
   setup() {
     const spriteSheet = Loader.shared.resources.sprites.spritesheet
-    this.sprite = Sprite.from(spriteSheet.textures["SpikeHead/SpikeHead.png"])
+    this.sprite = Sprite.from(spriteSheet.textures["spikeHead/spikeHead.png"])
   }
 }

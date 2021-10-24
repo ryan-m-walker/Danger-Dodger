@@ -15,6 +15,6 @@ export class RockHead extends Enemy {
 
   setup() {
     const spriteSheet = Loader.shared.resources.sprites.spritesheet
-    this.sprite = Sprite.from(spriteSheet.textures["RockHead/RockHead.png"])
+    this.sprite = Sprite.from(spriteSheet.textures["rockHead/rockHead.png"])
   }
 }

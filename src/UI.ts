@@ -17,7 +17,7 @@ export class UI extends Container {
       fontSize: 20 * SCALE,
       fontWeight: "bold",
       letterSpacing: 3,
-      fill: Color.WHITE,
+      fill: Color.WHITE.hex,
       fontFamily: Resources.UPHEAVAL,
     })
 
@@ -32,7 +32,7 @@ export class UI extends Container {
       fontSize: 20 * SCALE,
       fontWeight: "bold",
       letterSpacing: 3,
-      fill: Color.WHITE,
+      fill: Color.WHITE.hex,
       fontFamily: Resources.UPHEAVAL,
     })
 
@@ -53,7 +53,11 @@ export class UI extends Container {
         this.showGameOverText()
         this.hpText.text = "HP: 0%"
       } else {
-        this.hpText.text = `HP: ${GameState.state.health}%`
+        this.hpText.text = `HP: ${newState.health}%`
+        this.hpText.style.fill = Color.RED.blend(
+          Color.WHITE,
+          newState.health * 0.01
+        ).hexString
       }
     })
   }
@@ -61,7 +65,7 @@ export class UI extends Container {
   showGameOverText() {
     const gameOverTextStyle = new TextStyle({
       align: "center",
-      fill: Color.RED,
+      fill: Color.RED.hex,
       fontSize: 42 * SCALE,
       fontWeight: "bold",
       letterSpacing: 3,
@@ -77,7 +81,7 @@ export class UI extends Container {
 
     const gameOverSubTextStyle = new TextStyle({
       align: "center",
-      fill: Color.WHITE,
+      fill: Color.WHITE.hex,
       fontSize: 12 * SCALE,
       fontWeight: "bold",
       letterSpacing: 3,
