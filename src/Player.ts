@@ -21,7 +21,7 @@ import { GameScene } from "./scenes/GameScene"
 
 const ACCELERATION = 0.75
 const MAX_VELOCITY = 6
-const MAX_DASH_VELOCITY = 20
+const MAX_DASH_VELOCITY = 15
 const INJURED_COOL_DOWN_TIME = 65
 const DASH_COOL_DOWN = 8
 

@@ -9,17 +9,16 @@ import Input from "./Input"
 import { GameScene } from "./scenes/GameScene"
 
 console.log("Starting Memory Stats")
-const stats = new MemoryStats()
+const memoryStats = new MemoryStats()
 
-stats.domElement.style.position = "fixed"
-stats.domElement.style.right = "0px"
-stats.domElement.style.bottom = "0px"
+memoryStats.domElement.style.position = "fixed"
+memoryStats.domElement.style.right = "0px"
+memoryStats.domElement.style.bottom = "0px"
 
-document.body.appendChild(stats.domElement)
+document.body.appendChild(memoryStats.domElement)
 
-requestAnimationFrame(function rAFloop() {
-  stats.update()
-  requestAnimationFrame(rAFloop)
+Ticker.shared.add(() => {
+  memoryStats.update()
 })
 
 Loader.registerPlugin(WebfontLoaderPlugin)

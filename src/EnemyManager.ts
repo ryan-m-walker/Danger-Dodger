@@ -95,7 +95,10 @@ export class EnemyManager {
 
   private update() {
     for (const enemy of this.enemies) {
-      if (enemy.sprite.y > SceneManager.app.screen.height) {
+      if (
+        enemy.sprite.y - enemy.sprite.height * 0.5 >
+        SceneManager.app.screen.height
+      ) {
         enemy.remove()
         enemy.destroy()
         this.enemies = this.enemies.filter((e) => e.id !== enemy.id)
