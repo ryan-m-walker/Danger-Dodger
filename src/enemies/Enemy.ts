@@ -3,6 +3,7 @@ import { MotionBlurFilter } from "pixi-filters"
 import * as uuid from "uuid"
 import { SCALE } from "../constants"
 import SceneManager from "../SceneManager"
+import GameState, { UnsubscribeFunction } from "../GameState"
 
 export class Enemy extends Container {
   private readonly screenHeight: number
@@ -23,6 +24,8 @@ export class Enemy extends Container {
   private hitBoxWidth: number
   private hitBoxHeight: number
 
+  private unsubscribeFunction: UnsubscribeFunction
+
   constructor(x: number) {
     super()
     this.screenHeight = SceneManager.app.screen.height
@@ -40,6 +43,20 @@ export class Enemy extends Container {
       this.sprite.height - this.spritePadding.t - this.spritePadding.b
 
     Ticker.shared.add(this.update, this)
+    this.unsubscribeFunction = GameState.subscribe((newState, prevState) => {
+      if (newState.isPaused === true && prevState.isPaused === false) {
+        if (this.sprite instanceof AnimatedSprite) {
+          this.sprite.stop()
+        }
+      }
+
+      if (newState.isPaused === false && prevState.isPaused === true) {
+        if (this.sprite instanceof AnimatedSprite) {
+          this.sprite.play()
+        }
+      }
+    })
+
     this.afterInitialize()
   }
 
@@ -48,10 +65,13 @@ export class Enemy extends Container {
   afterInitialize() {}
 
   update(deltaTime: number) {
-    this.sprite.y += this.speed + deltaTime
+    if (!GameState.state.isPaused) {
+      this.sprite.y += this.speed + deltaTime
+    }
   }
 
   remove() {
+    this.unsubscribeFunction()
     Ticker.shared.remove(this.update, this)
     this.sprite.destroy()
     this.destroy()

@@ -87,6 +87,7 @@ export class EnemyManager {
 
   restart() {
     for (const enemy of this.enemies) {
+      enemy.remove()
       SceneManager.currentScene.removeChild(enemy)
     }
 

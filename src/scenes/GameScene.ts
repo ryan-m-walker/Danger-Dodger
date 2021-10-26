@@ -1,7 +1,6 @@
 import { Container, filters, Graphics } from "pixi.js"
 import { MotionBlurFilter } from "@pixi/filter-motion-blur"
 import { RGBSplitFilter } from "@pixi/filter-rgb-split"
-import { TestEnemy } from "../enemies/TestEnemy"
 import { EnemyManager } from "../EnemyManager"
 import { bloomFilter } from "../filters"
 import GameState, { UnsubscribeFunction } from "../GameState"
@@ -13,16 +12,17 @@ import SceneManager from "../SceneManager"
 import { UI } from "../UI"
 import { Scene } from "./Scene"
 import { Color } from "../constants"
+import { PauseScreen } from "../PauseScreen"
 
 export class GameScene extends Container implements Scene {
   static id = "game"
 
-  player: Player
-  testEnemy: TestEnemy
-  enemyManager: EnemyManager
+  private player: Player
+  private enemyManager: EnemyManager = new EnemyManager()
+  private pauseScreen: PauseScreen | null
 
-  time = 0
-  startTime: number
+  private time = 0
+  private startTime: number
 
   private isShaking = false
   private shakeTime = 0
@@ -38,7 +38,6 @@ export class GameScene extends Container implements Scene {
     const screenWidth = SceneManager.app.screen.width
     const screenHeight = SceneManager.app.screen.height
 
-    this.enemyManager = new EnemyManager()
     this.enemyManager.start()
 
     const map = new GameMap()
@@ -53,17 +52,37 @@ export class GameScene extends Container implements Scene {
 
     this.stateUnsubscribeFunction = GameState.subscribe(
       (newState, prevState) => {
-        if (newState.isGameOver === true) {
-          document.addEventListener("keydown", this.keyDownEventHandler)
-        }
-
         if (newState.time !== prevState.time) {
           if (newState.time % 25 === 0) {
             GameState.setState({ difficulty: newState.difficulty + 1 })
           }
         }
+
+        if (newState.isPaused === true && prevState.isPaused === false) {
+          this.pauseScreen = new PauseScreen()
+          this.addChild(this.pauseScreen)
+        }
+
+        if (newState.isPaused === false && prevState.isPaused === true) {
+          this.removeChild(this.pauseScreen)
+          this.pauseScreen.remove()
+          this.pauseScreen.destroy()
+          this.pauseScreen = null
+        }
       }
     )
+
+    window.addEventListener("keydown", this.handleKeyDown)
+  }
+
+  handleKeyDown = (e: KeyboardEvent) => {
+    if (GameState.state.isGameOver && e.code === Key.Enter) {
+      this.restart()
+    }
+
+    if (!GameState.state.isGameOver && e.code === Key.Escape) {
+      GameState.setState((state) => ({ isPaused: !state.isPaused }))
+    }
   }
 
   // TODO: rename
@@ -74,13 +93,6 @@ export class GameScene extends Container implements Scene {
     this.addChild(this.player)
   }
 
-  keyDownEventHandler = (e: KeyboardEvent) => {
-    if (e.code === Key.Enter) {
-      document.removeEventListener("keydown", this.keyDownEventHandler)
-      this.restart()
-    }
-  }
-
   restart() {
     GameState.setState({
       health: 100,
@@ -88,12 +100,25 @@ export class GameScene extends Container implements Scene {
       time: 0,
       difficulty: 1,
     })
-
     this.enemyManager.restart()
     this.initGameState()
   }
 
+  killPlayer() {
+    this.player.kill()
+  }
+
   update() {
+    this.noiseFilter.seed = Math.random()
+
+    if (GameState.state.isPaused) {
+      // TODO:
+      // would be cool to keep the shake in the background when paused but because
+      // of th nesting of the pause menu in this container it'll be tricky for now
+      this.filters = this.getDefaultFilters()
+      return
+    }
+
     if (this.isShaking) {
       this.x = getRandomInt(-this.shakeStrength, this.shakeStrength)
       this.y = getRandomInt(-this.shakeStrength, this.shakeStrength)
@@ -122,15 +147,7 @@ export class GameScene extends Container implements Scene {
       this.player.detectCollisions(this.enemyManager.enemies)
     }
 
-    // for (const enemy of this.enemyManager.enemies) {
-    //   const hitBox = enemy.getHitBox()
-    //   const box = new Graphics()
-    //   box.beginFill(Color.RED.hex, 0.1)
-    //   box.drawRect(hitBox.x, hitBox.y, hitBox.w, hitBox.h)
-    //   this.addChild(box)
-    // }
-
-    if (GameState.state.health > 0 && this.time < Number.MAX_SAFE_INTEGER) {
+    if (GameState.state.health > 0) {
       const time = Date.now()
       const current = Math.floor((time - this.startTime) * 0.001)
 
@@ -139,8 +156,6 @@ export class GameScene extends Container implements Scene {
         GameState.setState({ time: this.time })
       }
     }
-
-    this.noiseFilter.seed = Math.random()
   }
 
   shake(frames: number = 10, strength: number = 3) {
@@ -156,8 +171,10 @@ export class GameScene extends Container implements Scene {
   }
 
   beforeDelete() {
+    window.removeEventListener("keydown", this.handleKeyDown)
     this.stateUnsubscribeFunction()
     this.enemyManager.cleanUp()
+    this.player.kill()
   }
 
   getDefaultFilters() {

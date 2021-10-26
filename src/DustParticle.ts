@@ -1,5 +1,6 @@
 import { Container, Sprite, Loader, Ticker } from "pixi.js"
 import { Resources, SCALE } from "./constants"
+import GameState from "./GameState"
 import { getRandomFloat, getRandomInt } from "./random"
 
 export class DustParticle extends Container {
@@ -32,6 +33,10 @@ export class DustParticle extends Container {
   }
 
   update(deltaTime: number) {
+    if (GameState.state.isPaused) {
+      return
+    }
+
     this.life += 1
     const newScale = this.sprite.scale.x + 0.01
     this.sprite.scale.set(newScale, newScale)

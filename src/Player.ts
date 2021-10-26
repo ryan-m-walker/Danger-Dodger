@@ -6,9 +6,10 @@ import {
   Ticker,
   Graphics,
 } from "pixi.js"
+import { MotionBlurFilter } from "@pixi/filter-motion-blur"
 
 import { Enemy } from "./enemies/Enemy"
-import GameState from "./GameState"
+import GameState, { UnsubscribeFunction } from "./GameState"
 import Input from "./Input"
 import { Key } from "./Key"
 import { Vector } from "./Vector"
@@ -16,18 +17,24 @@ import { getChance, getRandomFloat, getRandomInt } from "./random"
 import { DustParticle } from "./DustParticle"
 import { Resources, SCALE } from "./constants"
 import SceneManager from "./SceneManager"
-import { MotionBlurFilter } from "@pixi/filter-motion-blur"
 import { GameScene } from "./scenes/GameScene"
 
-const ACCELERATION = 0.75
-const MAX_VELOCITY = 6
-const MAX_DASH_VELOCITY = 15
-const INJURED_COOL_DOWN_TIME = 65
-const DASH_COOL_DOWN = 8
-
+// Sprite
 const SPRITE_PADDING_H = 6 * SCALE
 const SPRITE_PADDING_V = 8 * SCALE
 
+// Movement
+const ACCELERATION = 0.75
+const MAX_DASH_VELOCITY = 15
+
+// Dash
+const MAX_VELOCITY = 6
+const DASH_COOL_DOWN = 8
+
+// Injured
+const INJURED_COOL_DOWN_TIME = 65
+
+// State
 enum PlayerState {
   RUNNING,
   IDLE,
@@ -36,17 +43,20 @@ enum PlayerState {
 }
 
 export class Player extends Container {
-  hitBox: Graphics
-  isDead = false
-
+  // container config
   sortableChildren = true
 
+  // player state
+  isDead = false
+  private playerState = PlayerState.IDLE
+
+  // window
   private readonly windowWidth: number
   private readonly windowHeight: number
 
-  sprite: AnimatedSprite
+  // sprite
+  private sprite: AnimatedSprite
   private spriteSheet: Spritesheet
-  private playerState = PlayerState.IDLE
 
   // movement
   private velocity = Vector.Zero()
@@ -59,14 +69,16 @@ export class Player extends Container {
   private injuredBlinkOn = true
 
   // position
-  private hitBoxWidth: number
-  private hitBoxHeight: number
+  private readonly hitBoxWidth: number
+  private readonly hitBoxHeight: number
 
   // dash
   private dashCoolDown = 0
   private isDashPressed = false
   private velocityBeforeDash = Vector.Zero()
   private accelerationBeforeDash = Vector.Zero()
+
+  private unsubscribeFunction: UnsubscribeFunction
 
   constructor() {
     super()
@@ -94,6 +106,16 @@ export class Player extends Container {
     this.addChild(this.sprite)
 
     Ticker.shared.add(this.update, this)
+
+    this.unsubscribeFunction = GameState.subscribe((newState, prevState) => {
+      if (newState.isPaused === true && prevState.isPaused === false) {
+        this.sprite.stop()
+      }
+
+      if (newState.isPaused === false && prevState.isPaused === true) {
+        this.sprite.stop()
+      }
+    })
   }
 
   getAnimationKey(key: string) {
@@ -175,7 +197,7 @@ export class Player extends Container {
   }
 
   update(deltaTime: number) {
-    if (this.isDead) {
+    if (this.isDead || GameState.state.isPaused) {
       return
     }
 
@@ -384,8 +406,14 @@ export class Player extends Container {
 
   kill() {
     this.isDead = true
+    this.unsubscribeFunction()
     this.sprite.destroy()
     GameState.setState({ isGameOver: true })
+  }
+
+  restart() {
+    this.unsubscribeFunction()
+    this.sprite.destroy()
   }
 
   getHitBox() {

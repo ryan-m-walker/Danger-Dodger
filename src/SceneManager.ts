@@ -1,6 +1,21 @@
 import { Application, Ticker } from "pixi.js"
+import Stats from "stats.js"
+import MemoryStats from "memory-stats"
 import { Color, SCALE } from "./constants"
 import { Scene } from "./scenes/Scene"
+
+console.log("Starting Memory Stats")
+const memoryStats = new MemoryStats()
+
+memoryStats.domElement.style.position = "fixed"
+memoryStats.domElement.style.left = "80px"
+memoryStats.domElement.style.top = "0px"
+
+document.body.appendChild(memoryStats.domElement)
+
+const stats = new Stats()
+stats.showPanel(0) // 0: fps, 1: ms, 2: mb, 3+: custom
+document.body.appendChild(stats.dom)
 
 class SceneManager {
   scenes: Record<string, Scene> = {}
@@ -35,9 +50,12 @@ class SceneManager {
   }
 
   update(deltaTime: number) {
+    memoryStats.update()
+    stats.begin()
     if (this.currentScene && this.currentScene.update) {
       this.currentScene.update(deltaTime)
     }
+    stats.end()
   }
 
   setScene(sceneID: string) {
